@@ -1,4 +1,5 @@
 import scipy.spatial
+import numpy as np
 class Linear_interp(object):
 
     """
