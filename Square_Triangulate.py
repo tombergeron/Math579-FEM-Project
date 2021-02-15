@@ -1,163 +1,153 @@
 import numpy as np
 
-# class Node():
-#     """
-#     Base class for an element of a quadtree
-#
-#     Attributes:
-#         pts (list): indices of vertices defining the triangle
-#         parent (Node object): "parent node". If root node then
-#         returns a string "root".
-#         children (list of node objects): list of four nodes forming
-#         the branch of current node
-#     """
-#     def __init__(self, pts, parent = "root", layer = 0):
-#
-#         self.pts = pts
-#         self.parent = parent
-#         self.children = []
-#         self.divided = False
-#         self.layer = layer
-#         return
+class Node():
+    """
+    Base class for an element of a quadtree
+
+    Attributes:
+        pts (list): indices of vertices defining the triangle
+        parent (Node object): "parent node". If root node then
+        returns a string "root".
+        children (list of node objects): list of four nodes forming
+        the branch of current node
+    """
+    def __init__(self, pts, parent = "root", layer = 0):
+
+        self.pts = pts
+        self.parent = parent
+        self.children = []
+        self.divided = False
+        self.layer = layer
+        return
 
 
 
-# class Square_QT():
-#     """
-#     Quadtree class for a uniform triangulation of a square
+class Rect_QT():
+    """
+    Quadtree class for a uniform triangulation of a rectangle
+
+    """
+
+    def __init__(self, bl = [0,0], tr = [1,1]):
+
+        """
+        Initialize base triangle formed of 8 uniform triangles
+        -----
+        |\  |
+        | \ |
+        |  \|
+        -----
+        """
+
+
+
+        xs = [bl[0], (tr[0] + bl[0])/2, tr[0], bl[0], (tr[0] + bl[0])/2, tr[0],
+              bl[0], (tr[0] + bl[0])/2, tr[0]]
+
+        ys = [bl[1],bl[1], bl[1],
+              (tr[1] + bl[1])/2,(tr[1] + bl[1])/2, (tr[1] + bl[1])/2,
+            tr[1], tr[1], tr[1]]
+
+        # preferable data structure
+        xy = [np.array([xs[i], ys[i]]) for i in range(9)]
+        self.xy = xy.copy()
+        #connectivity matrix
+        # initial spatial grid
+        self.T = [[0,1,3],[1,3,4],[1,2,4],[2,4,5],[3,4,6],[4,6,7],[4,5,7],[5,7,8]]
+        # first layer of tree structure
+        self.Tree = [Node(t) for t in self.T]
+        self.nodes = len(xy)
+
+        return
+
+
+    def branch(self, node):
+        # single triangle input
+        tri = node.pts
+        # use pts to slice xy list
+        self.xy.append(self.xy[tri[0]]/2 + self.xy[tri[1]]/2)
+        self.xy.append(self.xy[tri[1]]/2 + self.xy[tri[2]]/2)
+        self.xy.append(self.xy[tri[2]]/2 + self.xy[tri[0]]/2)
+
+        # Create another 4 Node children
+        i = self.nodes
+        tt = [[tri[0],i,i+2], [i,tri[1],i+1], [i+1,tri[2],i+2], [i, i+1, i+2]]
+        node.children = [Node(t, parent = node, layer = node.layer +1) for t in tt]
+        self.nodes +=3
+
+        return
+
+    def refine(self, node, k):
+        """
+        function to add a single layer to tree stucture of T.
+
+
+        G- np.array - 1D list of coordinates
+        N defines how many refinements to perform on the grid G
+        output: quadtree structure for refined mesh
+
+                   /0\
+                  /___\    "ordering they are added"
+                 /\ 3/ \
+                /_1\/ 2_\
+
+        0 is the first node in parent.
+        k = depth of tree structure. 0 corresponds to first layer.
+        """
+        if node.layer < k:
+            self.branch(node)
+            for child in node.children:
+                self.refine(child, k)
+        else:
+            return
+        #self.nodes = 2 + 10*(N+k)**2
+        return
+
+    def connectivity(self, N, k, T_con):
+        """
+        output list of connectivity elements for the base level of children
+        """
+        if N.layer < k:
+            for child in N.children:
+                self.connectivity(child, k, T_con)
+        else:
+            T_con.append(N.pts)
+            return
+        #self.nodes = 2 + 10*(N+k)**2
+        return
+
+
+    def NN_search(self, Qs):
+        """
+        Function to perform nearest neighbour search on quadtree structure
+
+        Input: A - Node object
+               Q: [N,3] numpy array
+
+        Output: Triangle containing point
+        """
+        self.dist_init(Qs)
+        # first find root node triangle:
+
+        #compute distance from nodes:
+
+        return
+
+
+
+
+# # Small test to produce data
+# import scipy.io
+# S = Rect_QT()
+# for nn in S.Tree:
+#     S.refine(nn, 4)
+#     print(len(S.xy))
 #
-#     """
+# TT = []
+# for nn in S.Tree:
+#     S.connectivity(nn, 4, TT)
 #
-#     def __init__(self, bl = [0,0], tr = [1,1]):
-#
-#         # Initialize base triangle formed of 8 uniform triangles
-#
-#
-#
-#         self.xyz_init = xyz.copy()
-#         #connectivity matrix
-#
-#         # initial spatial grid
-#         self.T = T
-#         self.xyz = xyz
-#         # first layer of tree structure
-#         self.Tree = [Node(t) for t in T]
-#         self.nodes = 12
-#
-#         return
-#
-#
-#     def branch(self, nd):
-#         # single triangle input
-#         tri = nd.pts
-#         self.xyz.append(self.xyz[tri[0]]/2 + self.xyz[tri[1]]/2)
-#         self.xyz.append(self.xyz[tri[1]]/2 + self.xyz[tri[2]]/2)
-#         self.xyz.append(self.xyz[tri[2]]/2 + self.xyz[tri[0]]/2)
-#         i = self.nodes
-#         #T_new.append([tri, [[tri[0],i,i+2], [i,tri[1],i+1], [i+1,tri[2],i+2], [i, i+1, i+2]]])
-#         #T_new.append([tri, [[tri[0],i,i+2], [i,tri[1],i+1], [i+1,tri[2],i+2], [i, i+1, i+2]]])
-#         tt = [[tri[0],i,i+2], [i,tri[1],i+1], [i+1,tri[2],i+2], [i, i+1, i+2]]
-#         nd.children = [Node(t, parent = nd, layer = nd.layer +1) for t in tt]
-#         self.nodes +=3
-#
-#         return
-#
-#     def refine(self, nde, k):
-#         """
-#         function to add a single layer to tree stucture of T.
-#
-#
-#         G- np.array - 1D list of coordinates
-#         N defines how many refinements to perform on the grid G
-#         output: quadtree structure for refined mesh
-#
-#                    /0\
-#                   /___\
-#                  /\ 3/ \
-#                 /_1\/ 2_\
-#
-#         0 is the first node in parent.
-#         k = depth of tree structure. 0 corresponds to first layer.
-#         """
-#         if nde.layer < k:
-#             self.branch(nde)
-#             for child in nde.children:
-#                 self.refine(child, k)
-#         else:
-#             return
-#         #self.nodes = 2 + 10*(N+k)**2
-#         return
-#
-#     def connectivity(self, N, k, T_con):
-#         """
-#         output list of connectivity elements for the base level of children
-#         """
-#         if N.layer < k:
-#             for child in N.children:
-#                 self.connectivity(child, k, T_con)
-#         else:
-#             T_con.append(N.pts)
-#             return
-#         #self.nodes = 2 + 10*(N+k)**2
-#         return
-#
-#     def dist_to(self, A, Qs):
-#         """
-#         Function to provide list of distances of the queries (Qs) to the list
-#         of points in A.
-#
-#         Inputs:
-#         A: [n,3] numpy array
-#         Q: [N,3] numpy array
-#
-#         Output: [n, N] numpy array of distances
-#         """
-#         #out numpy array
-#         outs = np.zeros([len(A),len(Qs)])
-#         ii = 0
-#         for X in A:
-#             temp = X-Qs
-#             outs[ii, :] = np.sqrt(temp[:,0]**2 + temp[:,1]**2 + temp[:,2]**2)
-#             ii+=1
-#
-#         return outs
-#
-#     def dist_init(self, Q):
-#         # find root node for each query point
-#         """
-#         Input: Q - [N,3] numpy array
-#         Output: [N,] list of root nodes
-#         """
-#         XYZ = np.array(self.xyz[0:20])
-#         # a = np.array([XYZ[t] for t in self.T])
-#         init_dists = self.dist_to(XYZ, Q)
-#
-#         #build convenient data structure using the min function
-#         inds = np.argpartition(init_dists,3)
-#
-#         #make list indexing the triangles
-#
-#
-#         return
-#
-#
-#
-#     def NN_search(self, Qs):
-#         """
-#         Function to perform nearest neighbour search on quadtree structure
-#
-#         Input: A - Node object
-#                Q: [N,3] numpy array
-#
-#         Output: Triangle containing point
-#         """
-#         self.dist_init(Qs)
-#         # first find root node triangle:
-#
-#         #compute distance from nodes:
-#
-#         return
-#
+# scipy.io.savemat("../Plotting-Tools/Data_Plots/square_triangulate.mat", {"pts": np.array(S.xy), "T": TT})
 
 
 
@@ -166,7 +156,7 @@ import numpy as np
 
 
 
-
+#
 def Square_Triangulate(N, x0 = [0,0], x1 = [1,1]):
     """
     Inputs:
@@ -241,19 +231,19 @@ def Square_Triangulate(N, x0 = [0,0], x1 = [1,1]):
 #     return
 #
 
-
-def red_refinement(N,num):
-    """
-    N = starting number of nodes, i  = number of refinements
-    returns an array of # num of nodes along each axis at each stage
-    """
-    ref = [N]
-    for n in range(num-1):
-        ref.append(2*ref[n]-1)
-
-    return ref
-
-Ns = red_refinement(4, 2)
+#
+# def red_refinement(N,num):
+#     """
+#     N = starting number of nodes, i  = number of refinements
+#     returns an array of # num of nodes along each axis at each stage
+#     """
+#     ref = [N]
+#     for n in range(num-1):
+#         ref.append(2*ref[n]-1)
+#
+#     return ref
+#
+# Ns = red_refinement(4, 2)
 
 # E, Nodes, Mesh = Square_Triangulate(Ns[0])
 # Mesh_Plot(E, Nodes)
